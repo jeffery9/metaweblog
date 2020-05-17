@@ -28,6 +28,7 @@ need to implement those methods
 db = odoo.http.request.db
 # env = odoo.http.request.env
 pool = odoo.registry(db)
+pool.check_signaling()
 cr = odoo.sql_db.db_connect(db).cursor()
 cr.autocommit(True)
 
