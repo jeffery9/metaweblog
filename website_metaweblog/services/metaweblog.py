@@ -2,8 +2,10 @@
 
 import odoo
 from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT
+from odoo.service import security
 
 import datetime
+import threading
 
 import logging
 
@@ -24,10 +26,11 @@ need to implement those methods
 '''
 
 db = odoo.http.request.db
-registry = odoo.registry(db)
-registry.cursor().autocommit(True)
+# env = odoo.http.request.env
+pool = odoo.registry(db)
+# registry.cursor().autocommit(True)
 
-env = odoo.api.Environment(registry.cursor(), odoo.SUPERUSER_ID, {})
+env = odoo.api.Environment(pool.cursor(), odoo.SUPERUSER_ID, {})
 
 if db:
     user_model = env['res.users']
@@ -49,8 +52,18 @@ def blog_installed():
 
 
 def check_permission(username, password):
-    uid = user_model.authenticate(db, username, password, None)
-    if uid and user_model.browse(uid).has_group('website.group_website_designer'):
+    res = security.login(db, username, password)
+    msg = res and 'successful login' or 'bad login or password'
+    _logger.info("%s from '%s' using database '%s'", msg, username, db.lower())
+    if not res:
+        return False
+
+    threading.current_thread().uid = res
+
+    user_id = user_model.search([('id', '=', res)], limit=1)
+    if user_id and user_id.has_group('website.group_website_designer'):
+
+        env.uid = user_id.id
         return True
     return False
 
@@ -103,20 +116,22 @@ def exp_metaWeblog_editPost(postid, username, password, post, publish=True):
 
     blog_post = blog_post_model.search([('id', '=', postid)])
     tag_ids = blog_tag_model.search([('name', 'in', post['categories'])])
-    blog_post.write(
-        {
-            'name':
-                post['title'],
-            'content':
-                post['description'],
-            'tag_ids': [(6, False, tag_ids.ids)],
-            'post_date':
-                datetime.datetime.strftime(
-                    datetime.datetime.strptime(post['dateCreated'].value, "%Y%m%dT%H:%M:%S"),
-                    DEFAULT_SERVER_DATETIME_FORMAT
-                ),
-        }
-    )
+    vals = {
+        'name':
+            post['title'],
+        'content':
+            post['description'],
+        'tag_ids':
+            tag_ids.ids and [(6, False, tag_ids.ids)] or [(5, False, False)],
+        'post_date':
+            'dateCreated' in post and datetime.datetime.strftime(
+                datetime.datetime.strptime(post['dateCreated'].value, "%Y%m%dT%H:%M:%S"),
+                DEFAULT_SERVER_DATETIME_FORMAT
+            ) or datetime.datetime.strftime(datetime.datetime.now(), DEFAULT_SERVER_DATETIME_FORMAT),
+    }
+    blog_post.write(vals)
+
+    env.cr.commit()
 
     return True
 
@@ -177,10 +192,14 @@ def exp_metaWeblog_getPost(postid, username, password):
     blog_post = blog_post_model.search([('id', '=', postid)])
 
     return {
-        'dateCreated': datetime.datetime.strftime(blog_post.post_date, DEFAULT_SERVER_DATETIME_FORMAT),
-        'description': blog_post.content,
-        'title': blog_post.name,
-        'postid': blog_post['id']
+        'dateCreated':
+            blog_post.post_date and datetime.datetime.strftime(blog_post.post_date, DEFAULT_SERVER_DATETIME_FORMAT),
+        'description':
+            blog_post.content,
+        'title':
+            blog_post.name,
+        'postid':
+            blog_post['id']
     }
 
 
@@ -273,6 +292,9 @@ def exp_metaWeblog_newPost(blogid, username, password, post, publish=True):
             'blog_id': blogid
         }
     )
+
+    env.cr.commit()
+
     return postid.id
 
 
@@ -294,6 +316,9 @@ def exp_wp_newCategory(blog_id, username, password, category):
 
 
 def dispatch(method, params):
+
+    threading.currentThread().dbname = db
+
     if not blog_installed():
         raise Exception("Website Blog is not installed.")
 
