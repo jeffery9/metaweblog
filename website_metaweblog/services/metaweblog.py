@@ -28,9 +28,10 @@ need to implement those methods
 db = odoo.http.request.db
 # env = odoo.http.request.env
 pool = odoo.registry(db)
-# registry.cursor().autocommit(True)
+cr = odoo.sql_db.db_connect(db).cursor()
+cr.autocommit(True)
 
-env = odoo.api.Environment(pool.cursor(), odoo.SUPERUSER_ID, {})
+env = odoo.api.Environment(cr, odoo.SUPERUSER_ID, {})
 
 if db:
     user_model = env['res.users']
