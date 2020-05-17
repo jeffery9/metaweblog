@@ -98,7 +98,16 @@ def exp_metaWeblog_editPost(postid, username, password, post, publish=True):
 
     if not check_permission(username, password):
         return
-    raise Exception("Not implemented...")
+
+    blog_post = blog_post_model.search([('id', '=', postid)])
+
+    blog_post.write({
+        'dateCreated': blog_post.post_date,
+        'description': blog_post.content,
+        'title': blog_post.name,
+    })
+
+    return True
 
 
 def exp_metaWeblog_getCategories(blogid, username, password):
