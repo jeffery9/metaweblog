@@ -99,7 +99,7 @@ def exp_blogger_getUsersBlogs(appKey, username, password):
         data.append(
             {
                 'blogid': blog['id'],
-                'url': '%s/%s-%s' % ('/blog', blog['name'], blog['id']),
+                'url': '%s/%s-%s' % ('/blog', blog['name'].lower(), blog['id']),
                 'blogName': blog['name']
             }
         )
@@ -129,6 +129,8 @@ def exp_metaWeblog_editPost(postid, username, password, post, publish=True):
                 datetime.datetime.strptime(post['dateCreated'].value, "%Y%m%dT%H:%M:%S"),
                 DEFAULT_SERVER_DATETIME_FORMAT
             ) or datetime.datetime.strftime(datetime.datetime.now(), DEFAULT_SERVER_DATETIME_FORMAT),
+        'is_published':
+            publish,
     }
     blog_post.write(vals)
 
@@ -200,7 +202,9 @@ def exp_metaWeblog_getPost(postid, username, password):
         'title':
             blog_post.name,
         'postid':
-            blog_post['id']
+            blog_post['id'],
+
+        'link': blog_post.website_url,
     }
 
 
@@ -290,7 +294,8 @@ def exp_metaWeblog_newPost(blogid, username, password, post, publish=True):
             'content': post['description'],
             'tag_ids': [(6, False, tag_ids.ids)],
             'post_date': datetime.datetime.strftime(datetime.datetime.now(), DEFAULT_SERVER_DATETIME_FORMAT),
-            'blog_id': blogid
+            'blog_id': blogid,
+            'is_published': publish
         }
     )
 
