@@ -19,14 +19,12 @@ rpc_request = logging.getLogger(__name__ + '.rpc.request')
 rpc_response = logging.getLogger(__name__ + '.rpc.response')
 
 
-
 def patch_dispatch_rpc():
     _logger.info('Patching Dispatch RPC http.dispatch_rpc')
 
     dispatch_rpc = http.dispatch_rpc
 
     def new_dispatch_rpc(service_name, method, params):
-        print('run patched dispatch_rpc.....')
         try:
             rpc_request_flag = rpc_request.isEnabledFor(logging.DEBUG)
             rpc_response_flag = rpc_response.isEnabledFor(logging.DEBUG)
@@ -37,7 +35,7 @@ def patch_dispatch_rpc():
                     start_memory = memory_info(psutil.Process(os.getpid()))
                 if rpc_request and rpc_response_flag:
                     netsvc.log(rpc_request, logging.DEBUG, '%s.%s' % (service_name, method),
-                                    http.replace_request_password(params))
+                               http.replace_request_password(params))
 
             threading.current_thread().uid = None
             threading.current_thread().dbname = None
@@ -58,11 +56,7 @@ def patch_dispatch_rpc():
                     if rpc_response_flag:
                         netsvc.log(rpc_response, logging.DEBUG, logline, result)
                     else:
-                        netsvc.log(rpc_request,
-                                        logging.DEBUG,
-                                        logline,
-                                        http.replace_request_password(params),
-                                        depth=1)
+                        netsvc.log(rpc_request, logging.DEBUG, logline, http.replace_request_password(params), depth=1)
 
                 return result
 
@@ -80,10 +74,8 @@ def patch_dispatch_rpc():
             tools.debugger.post_mortem(tools.config, sys.exc_info())
             raise
 
-    http.dispatch_rpc = new_dispatch_rpc
-    print('xxx')
+    addons.base.controllers.rpc.dispatch_rpc = new_dispatch_rpc
 
 
 def post_load():
     patch_dispatch_rpc()
-
