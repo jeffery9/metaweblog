@@ -2,6 +2,8 @@
 
 import odoo
 
+import datetime
+
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -74,9 +76,19 @@ def exp_blogger_getUsersBlogs(appKey, username, password):
 
     blog_ids = blog_model.search([])
 
-    return blog_ids.read(['name', 'subtitle', 'content'])
+    data = []
 
-    raise Exception("Not implemented...")
+    blogs = blog_ids.read(['id', 'name'])
+    for blog in blogs:
+        data.append(
+            {
+                'blogid': blog['id'],
+                'url': '%s/%s-%s' % ('/blog', blog['name'], blog['id']),
+                'blogName': blog['name']
+            }
+        )
+
+    return data
 
 
 def exp_metaWeblog_editPost(postid, username, password, post, publish=True):
@@ -95,21 +107,37 @@ def exp_metaWeblog_getCategories(blogid, username, password):
         description, string
         htmlurl, string
         rssurl, string
-        titile, string
+        title, string
         categoryid, string
     '''
 
     if not check_permission(username, password):
         return
-    raise Exception("Not implemented...")
+
+    data = []
+
+    tag_ids = blog_tag_model.search_read([], ['id', 'name'])
+    blog_id = blog_model.search([('id', '=', int(blogid))])
+
+    for tag in tag_ids:
+        data.append(
+            {
+                'categoryid': tag['id'],
+                'title': tag['name'],
+                'description': tag['name'],
+                'htmlurl': '/blog/%s-%s/tag/%s-%s' % (blog_id['name'], blog_id['id'], tag['name'], tag['id'])
+            }
+        )
+
+    return data
 
 
-def exp_metaWeblog_getPost(blogid, username, password):
+def exp_metaWeblog_getPost(postid, username, password):
     '''
     Return post
         dateCreated
         description
-        titile
+        title
         categories, list of string, optional
         enclosure, optional
             length, integer, optiona
@@ -126,7 +154,14 @@ def exp_metaWeblog_getPost(blogid, username, password):
 
     if not check_permission(username, password):
         return
-    raise Exception("Not implemented...")
+    blog_post = blog_post_model.search([('id', '=', postid)])
+
+    return {
+        'dateCreated': blog_post.post_date,
+        'description': blog_post.content,
+        'title': blog_post.name,
+        'postid': blog_post['id']
+    }
 
 
 def exp_metaWeblog_getRecentPosts(blogid, username, password, numberOfPosts=20):
@@ -134,7 +169,7 @@ def exp_metaWeblog_getRecentPosts(blogid, username, password, numberOfPosts=20):
     Return post
         dateCreated
         description
-        titile
+        title
         categories, list of string, optional
         enclosure, optional
             length, integer, optiona
@@ -148,10 +183,23 @@ def exp_metaWeblog_getRecentPosts(blogid, username, password, numberOfPosts=20):
             url, string, optional
 
     '''
-
     if not check_permission(username, password):
         return
-    raise Exception("Not implemented...")
+
+    data = []
+    blog_post_ids = blog_post_model.search([('blog_id', '=', int(blogid))], limit=numberOfPosts)
+
+    for blog_post in blog_post_ids:
+        data.append(
+            {
+                'dateCreated': blog_post.post_date,
+                'description': blog_post.content,
+                'title': blog_post.name,
+                'postid': blog_post['id']
+            }
+        )
+
+    return data
 
 
 def exp_metaWeblog_newMediaObject(blogid, username, password, file):
@@ -175,7 +223,7 @@ def exp_metaWeblog_newPost(blogid, username, password, post, publish=True):
     Params post
         dateCreated
         description
-        titile
+        title
         categories, list of string, optional
         enclosure, optional
             length, integer, optiona
@@ -194,7 +242,18 @@ def exp_metaWeblog_newPost(blogid, username, password, post, publish=True):
 
     if not check_permission(username, password):
         return
-    raise Exception("Not implemented...")
+
+    tag_ids = blog_tag_model.search([('name', 'in', post['categories'])])
+    postid = blog_post_model.create(
+        {
+            'name': post['title'],
+            'content': post['description'],
+            'tag_ids': [(6, False, tag_ids.ids)],
+            'post_date': datetime.datetime.now(),
+            'blog_id': blogid
+        }
+    )
+    return postid.id
 
 
 def exp_wp_newCategory(blog_id, username, password, category):
