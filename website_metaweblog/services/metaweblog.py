@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import odoo
+from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT
 
 import datetime
 
@@ -24,6 +25,7 @@ need to implement those methods
 
 db = odoo.http.request.db
 registry = odoo.registry(db)
+registry.cursor().autocommit(True)
 
 env = odoo.api.Environment(registry.cursor(), odoo.SUPERUSER_ID, {})
 
@@ -100,12 +102,21 @@ def exp_metaWeblog_editPost(postid, username, password, post, publish=True):
         return
 
     blog_post = blog_post_model.search([('id', '=', postid)])
-
-    blog_post.write({
-        'dateCreated': blog_post.post_date,
-        'description': blog_post.content,
-        'title': blog_post.name,
-    })
+    tag_ids = blog_tag_model.search([('name', 'in', post['categories'])])
+    blog_post.write(
+        {
+            'name':
+                post['title'],
+            'content':
+                post['description'],
+            'tag_ids': [(6, False, tag_ids.ids)],
+            'post_date':
+                datetime.datetime.strftime(
+                    datetime.datetime.strptime(post['dateCreated'].value, "%Y%m%dT%H:%M:%S"),
+                    DEFAULT_SERVER_DATETIME_FORMAT
+                ),
+        }
+    )
 
     return True
 
@@ -166,7 +177,7 @@ def exp_metaWeblog_getPost(postid, username, password):
     blog_post = blog_post_model.search([('id', '=', postid)])
 
     return {
-        'dateCreated': blog_post.post_date,
+        'dateCreated': datetime.datetime.strftime(blog_post.post_date, DEFAULT_SERVER_DATETIME_FORMAT),
         'description': blog_post.content,
         'title': blog_post.name,
         'postid': blog_post['id']
@@ -201,7 +212,7 @@ def exp_metaWeblog_getRecentPosts(blogid, username, password, numberOfPosts=20):
     for blog_post in blog_post_ids:
         data.append(
             {
-                'dateCreated': blog_post.post_date,
+                'dateCreated': datetime.datetime.strftime(blog_post.post_date, DEFAULT_SERVER_DATETIME_FORMAT),
                 'description': blog_post.content,
                 'title': blog_post.name,
                 'postid': blog_post['id']
@@ -258,7 +269,7 @@ def exp_metaWeblog_newPost(blogid, username, password, post, publish=True):
             'name': post['title'],
             'content': post['description'],
             'tag_ids': [(6, False, tag_ids.ids)],
-            'post_date': datetime.datetime.now(),
+            'post_date': datetime.datetime.strftime(datetime.datetime.now(), DEFAULT_SERVER_DATETIME_FORMAT),
             'blog_id': blogid
         }
     )
