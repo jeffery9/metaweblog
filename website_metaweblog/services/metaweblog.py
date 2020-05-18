@@ -5,6 +5,9 @@ from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT
 from odoo.service import security
 
 from odoo.addons.web.controllers.main import ensure_db
+from odoo.addons.http_routing.models.ir_http import slug
+
+from xmlrpc.client import DateTime
 
 import base64
 import datetime
@@ -33,6 +36,7 @@ class MetaWeblog:
     def __init__(self, request):
 
         self.db = request.db
+        self.base_url = request.httprequest.host_url
         # self.pool = odoo.registry(self.db)
         # self.pool.check_signaling()
         # self.cr = odoo.sql_db.db_connect(self.db).cursor()
@@ -57,7 +61,7 @@ class MetaWeblog:
         if not res:
             return False
 
-        threading.current_thread().uid = res
+        # threading.current_thread().uid = res
 
         user_id = self.env['res.users'].search([('id', '=', res)], limit=1)
         if user_id and user_id.has_group('website.group_website_designer'):
@@ -92,14 +96,12 @@ class MetaWeblog:
         blog_ids = self.env['blog.blog'].search([])
 
         data = []
-
-        blogs = blog_ids.read(['id', 'name'])
-        for blog in blogs:
+        for blog_id in blog_ids:
             data.append(
                 {
-                    'blogid': blog['id'],
-                    'url': '%s/%s-%s' % ('/blog', blog['name'].lower(), blog['id']),
-                    'blogName': blog['name']
+                    'blogid': str(blog_id['id']),
+                    'url': '/blog/%s' % (slug(blog_id)),
+                    'blogName': blog_id['name']
                 }
             )
 
@@ -128,7 +130,7 @@ class MetaWeblog:
                     DEFAULT_SERVER_DATETIME_FORMAT
                 ) or datetime.datetime.strftime(datetime.datetime.now(), DEFAULT_SERVER_DATETIME_FORMAT),
             'is_published':
-                publish,
+                publish
         }
         blog_post.write(vals)
 
@@ -149,16 +151,17 @@ class MetaWeblog:
 
         data = []
 
-        tag_ids = self.env['blog.tag'].search_read([], ['id', 'name'])
+        tag_ids = self.env['blog.tag'].search([])
         blog_id = self.env['blog.blog'].search([('id', '=', int(blogid))])
 
         for tag in tag_ids:
             data.append(
                 {
-                    'categoryid': tag['id'],
+                    'categoryid': str(tag['id']),
                     'title': tag['name'],
                     'description': tag['name'],
-                    'htmlurl': '/blog/%s-%s/tag/%s-%s' % (blog_id['name'], blog_id['id'], tag['name'], tag['id'])
+                    'htmlUrl': '%s/blog/%s/tag/%s' % (self.base_url.strip('/'), slug(blog_id), slug(tag)),
+                    'rssUrl': ''
                 }
             )
 
@@ -166,19 +169,23 @@ class MetaWeblog:
 
     def exp_metaWeblog_getPost(self, postid, username, password):
         '''
-        Return post
-            dateCreated
-            description
-            title
-            categories, list of string, optional
-            enclosure, optional
-                length, integer, optiona
+        Params 
+            postid, string
+
+        Return post struct
+            dateCreated, dateTime.iso8601
+            description, string
+            title, string
+            enclosure struct
+                length, int4
                 type, string, optional
                 url, string, optional
+            categories, list of string, optional
             link, optional
             permalink, optional
-            postid, optional
-            source, optional
+            postid, string, optional
+            userid, string, optional
+            source
                 name, string, optional
                 url, string, optional
 
@@ -186,37 +193,46 @@ class MetaWeblog:
 
         if not self.check_permission(username, password):
             return
-        blog_post = self.env['blog.post'].search([('id', '=', postid)])
+        blog_post = self.env['blog.post'].search([('id', '=', int(postid))])
 
-        return {
-            'dateCreated':
-                blog_post.post_date and
-                datetime.datetime.strftime(blog_post.post_date, DEFAULT_SERVER_DATETIME_FORMAT),
-            'description':
-                blog_post.content,
-            'title':
-                blog_post.name,
-            'postid':
-                blog_post['id'],
-            'link':
-                blog_post.website_url,
+        post = {
+            'dateCreated': blog_post.post_date and DateTime(blog_post.post_date),
+            'description': blog_post.content,
+            'title': blog_post.name,
+            'enclosure': {
+                'length': 1,
+            },
+            'link': '%s%s' % (self.base_url.strip('/'), blog_post.website_url),
+            'permalink': '%s%s' % (self.base_url.strip('/'), blog_post.website_url),
+            'postid': blog_post.id,
+            'userid': str(self.env.uid),
+            'source': {},
+            'mt_keywords': ''
         }
+        if blog_post.tag_ids:
+            post.update({'categories': blog_post.tag_ids.mapped('name')})
+
+        return post
 
     def exp_metaWeblog_getRecentPosts(self, blogid, username, password, numberOfPosts=20):
         '''
-        Return post
-            dateCreated
-            description
-            title
-            categories, list of string, optional
-            enclosure, optional
-                length, integer, optiona
+        Params 
+            blogid, string
+
+        Return list of post struct
+            dateCreated, dateTime.iso8601
+            description, string
+            title, string
+            enclosure struct
+                length, int4
                 type, string, optional
                 url, string, optional
+            categories, list of string, optional
             link, optional
             permalink, optional
-            postid, optional
-            source, optional
+            postid, string, optional
+            userid, string, optional
+            source
                 name, string, optional
                 url, string, optional
 
@@ -228,23 +244,36 @@ class MetaWeblog:
         blog_post_ids = self.env['blog.post'].search([('blog_id', '=', int(blogid))], limit=numberOfPosts)
 
         for blog_post in blog_post_ids:
-            data.append(
-                {
-                    'dateCreated': datetime.datetime.strftime(blog_post.post_date, DEFAULT_SERVER_DATETIME_FORMAT),
-                    'description': blog_post.content,
-                    'title': blog_post.name,
-                    'postid': blog_post['id']
-                }
-            )
+            post = {
+                'dateCreated': blog_post.post_date and DateTime(blog_post.post_date),
+                'description': blog_post.content,
+                'title': blog_post.name,
+                'enclosure': {
+                    'length': 1
+                },
+                'link': '%s%s' % (self.base_url.strip('/'), blog_post.website_url),
+                'permalink': '%s%s' % (self.base_url.strip('/'), blog_post.website_url),
+                'postid': str(blog_post['id']),
+                'source': {},
+                'userid': str(self.env.uid)
+            }
+
+            if blog_post.tag_ids:
+                post.update({
+                    'categories': blog_post.tag_ids.mapped('name'),
+                })
+
+            data.append(post)
 
         return data
 
     def exp_metaWeblog_newMediaObject(self, blogid, username, password, file):
         '''
-        Params file
-            bits, base64
-            name, string
-            type, string
+        Params 
+            file struct
+                bits, base64
+                name, string
+                type, string
 
         Return urldata
             url, string
@@ -310,18 +339,18 @@ class MetaWeblog:
             {
                 'name': post['title'],
                 'content': post['description'],
-                'tag_ids': [(6, False, tag_ids.ids)],
+                'tag_ids': tag_ids.ids and [(6, False, tag_ids.ids)] or [(5, False, False)],
                 'post_date': datetime.datetime.strftime(datetime.datetime.now(), DEFAULT_SERVER_DATETIME_FORMAT),
-                'blog_id': blogid,
+                'blog_id': int(blogid),
                 'is_published': publish
             }
         )
 
-        return postid.id
+        return str(postid.id)
 
     def exp_wp_newCategory(self, blog_id, username, password, category):
         '''
-        Params category
+        Params category struct
             name, string
             slug, string, optional
             parent_id, integer
@@ -333,7 +362,12 @@ class MetaWeblog:
 
         if not self.check_permission(username, password):
             return
-        raise Exception("Not implemented...")
+
+        tag_val = {
+            'name': category['name'],
+        }
+        tag_id = self.env['blog.tag'].create(tag_val)
+        return tag_id.id
 
 
 def dispatch(method, params):
@@ -348,6 +382,7 @@ def dispatch(method, params):
 
     exp_method_name = 'exp_' + method.replace('.', '_')
     if hasattr(obj_metaweblog, exp_method_name):
+        _logger.info("Method '%s' called. " % method)
         return getattr(obj_metaweblog, exp_method_name)(*params)
     else:
         raise Exception("Method not found: %s" % method)
