@@ -4,6 +4,9 @@ import odoo
 from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT
 from odoo.service import security
 
+from xmlrpc.client import DateTime, Binary
+
+import base64
 import datetime
 import threading
 
@@ -41,6 +44,7 @@ if db:
     blog_tag_category_model = env['blog.tag.category']
     blog_tag_model = env['blog.tag']
     blog_post_model = env['blog.post']
+    attachment_model = env['ir.attachment']
 
 
 def blog_installed():
@@ -78,7 +82,8 @@ def exp_blogger_deletePost(appKey, postid, username, password, publish=True):
     '''
     if not check_permission(username, password):
         return
-    raise Exception("Not implemented...")
+    blog_post_model.search([('id', '=', int(postid))]).unlink()
+    return True
 
 
 def exp_blogger_getUsersBlogs(appKey, username, password):
@@ -204,8 +209,8 @@ def exp_metaWeblog_getPost(postid, username, password):
             blog_post.name,
         'postid':
             blog_post['id'],
-
-        'link': blog_post.website_url,
+        'link':
+            blog_post.website_url,
     }
 
 
@@ -260,7 +265,29 @@ def exp_metaWeblog_newMediaObject(blogid, username, password, file):
     '''
     if not check_permission(username, password):
         return
-    raise Exception("Not implemented...")
+
+    image_types = ['image/gif', 'image/jpe', 'image/jpeg', 'image/jpg', 'image/gif', 'image/png', 'image/svg+xml']
+
+    bin_data = base64.standard_b64encode(file['bits'].data)
+    name = file['name']
+    if name:
+        media_name = name.split('/').pop()
+    bin_type = file['type']
+
+    if bin_type not in image_types:
+        raise Exception('Not support media type: %s' % bin_type)
+
+    res_model = 'ir.ui.view'
+    res_id = False
+
+    attachment_data = {'name': media_name, 'public': True, 'res_id': res_id, 'res_model': res_model, 'datas': bin_data}
+
+    attachment_id = attachment_model.create(attachment_data)
+
+    env.cr.commit()
+
+    media_info = attachment_id._get_media_info()
+    return {'url': media_info['image_src']}
 
 
 def exp_metaWeblog_newPost(blogid, username, password, post, publish=True):
