@@ -7,7 +7,7 @@ from odoo.service import security
 from odoo.addons.web.controllers.main import ensure_db
 from odoo.addons.http_routing.models.ir_http import slug
 
-from xmlrpc.client import DateTime
+from xmlrpc.client import DateTime, Boolean
 
 import base64
 import datetime
@@ -81,7 +81,10 @@ class MetaWeblog:
 
         self.env['blog.post'].search([('id', '=', int(postid))]).unlink()
 
-        return True
+        return Boolean(True)
+
+    def exp_metaWeblog_deletePost(self, appKey, postid, username, password, publish=True):
+        return self.exp_blogger_deletePost(appKey, postid, username, password, publish)
 
     def exp_blogger_getUsersBlogs(self, appKey, username, password):
         '''
@@ -100,12 +103,15 @@ class MetaWeblog:
             data.append(
                 {
                     'blogid': str(blog_id['id']),
-                    'url': '/blog/%s' % (slug(blog_id)),
+                    'url': '%s/blog/%s' % (self.base_url.strip('/'), slug(blog_id)),
                     'blogName': blog_id['name']
                 }
             )
 
         return data
+
+    def exp_metaWeblog_getUsersBlogs(self, appKey, username, password):
+        return self.exp_blogger_getUsersBlogs(appKey, username, password)
 
     def exp_metaWeblog_editPost(self, postid, username, password, post, publish=True):
         '''
@@ -130,11 +136,11 @@ class MetaWeblog:
                     DEFAULT_SERVER_DATETIME_FORMAT
                 ) or datetime.datetime.strftime(datetime.datetime.now(), DEFAULT_SERVER_DATETIME_FORMAT),
             'is_published':
-                publish
+                Boolean(publish)
         }
         blog_post.write(vals)
 
-        return True
+        return Boolean(True)
 
     def exp_metaWeblog_getCategories(self, blogid, username, password):
         '''
@@ -200,7 +206,7 @@ class MetaWeblog:
             'description': blog_post.content,
             'title': blog_post.name,
             'enclosure': {
-                'length': 1,
+                'length': 0,
             },
             'link': '%s%s' % (self.base_url.strip('/'), blog_post.website_url),
             'permalink': '%s%s' % (self.base_url.strip('/'), blog_post.website_url),
@@ -249,7 +255,7 @@ class MetaWeblog:
                 'description': blog_post.content,
                 'title': blog_post.name,
                 'enclosure': {
-                    'length': 1
+                    'length': 0
                 },
                 'link': '%s%s' % (self.base_url.strip('/'), blog_post.website_url),
                 'permalink': '%s%s' % (self.base_url.strip('/'), blog_post.website_url),
@@ -342,7 +348,7 @@ class MetaWeblog:
                 'tag_ids': tag_ids.ids and [(6, False, tag_ids.ids)] or [(5, False, False)],
                 'post_date': datetime.datetime.strftime(datetime.datetime.now(), DEFAULT_SERVER_DATETIME_FORMAT),
                 'blog_id': int(blogid),
-                'is_published': publish
+                'is_published': Boolean(publish)
             }
         )
 
