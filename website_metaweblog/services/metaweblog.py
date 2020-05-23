@@ -83,8 +83,7 @@ class MetaWeblog:
 
         return Boolean(True)
 
-    def exp_metaWeblog_deletePost(self, appKey, postid, username, password, publish=True):
-        return self.exp_blogger_deletePost(appKey, postid, username, password, publish)
+    exp_metaWeblog_deletePost = exp_blogger_deletePost
 
     def exp_blogger_getUsersBlogs(self, appKey, username, password):
         '''
@@ -110,8 +109,7 @@ class MetaWeblog:
 
         return data
 
-    def exp_metaWeblog_getUsersBlogs(self, appKey, username, password):
-        return self.exp_blogger_getUsersBlogs(appKey, username, password)
+    exp_metaWeblog_getUsersBlogs = exp_blogger_getUsersBlogs
 
     def exp_metaWeblog_editPost(self, postid, username, password, post, publish=True):
         '''
