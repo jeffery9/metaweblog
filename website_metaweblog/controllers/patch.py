@@ -55,7 +55,8 @@ def patch_dispatch_rpc():
                         start_memory = memory_info(psutil.Process(os.getpid()))
                     if rpc_request and rpc_response_flag:
                         netsvc.log(
-                            rpc_request, logging.DEBUG, '%s.%s' % (service_name, method),
+                            rpc_request, logging.DEBUG, '%s.%s' %
+                            (service_name, method),
                             http.replace_request_password(params)
                         )
 
@@ -72,13 +73,22 @@ def patch_dispatch_rpc():
                     if psutil:
                         end_memory = memory_info(psutil.Process(os.getpid()))
                     logline = '%s.%s time:%.3fs mem: %sk -> %sk (diff: %sk)' % (
-                        service_name, method, end_time - start_time, start_memory / 1024, end_memory / 1024,
-                        (end_memory - start_memory) / 1024
+                        service_name, method, end_time - start_time,
+                        start_memory / 1024, end_memory / 1024,
+                        (end_memory-start_memory) / 1024
                     )
                     if rpc_response_flag:
-                        netsvc.log(rpc_response, logging.DEBUG, logline, result)
+                        netsvc.log(
+                            rpc_response, logging.DEBUG, logline, result
+                        )
                     else:
-                        netsvc.log(rpc_request, logging.DEBUG, logline, http.replace_request_password(params), depth=1)
+                        netsvc.log(
+                            rpc_request,
+                            logging.DEBUG,
+                            logline,
+                            http.replace_request_password(params),
+                            depth=1
+                        )
 
                 return result
 

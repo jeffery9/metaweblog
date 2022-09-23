@@ -1,14 +1,11 @@
 # -*- coding: utf-8 -*-
 {
-    'name': "METAWEBLOG API for blog",
-
+    'name': "MetaWeblog API for blog",
     'summary': """
          """,
-
     'description': """
          
     """,
-
     'author': "jeffery, genin IT",
     'website': "http://www.geninit.cn",
 
@@ -19,16 +16,11 @@
     'version': '0.1',
 
     # any module necessary for this one to work correctly
-    'depends': ['base','website_blog'],
+    'depends': ['base', 'website_blog'],
 
     # always loaded
-    'data': [
-    ],
+    'data': [],
     # only loaded in demonstration mode
-    'demo': [
-    ],
-
-
+    'demo': [],
     'post_load': 'post_load'
-
 }

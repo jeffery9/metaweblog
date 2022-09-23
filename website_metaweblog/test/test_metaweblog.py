@@ -7,9 +7,10 @@ version = common.version()
 print(version)
 
 method_lists = [
-    'blogger.getUsersBlogs','blogger.deletePost',  'metaWeblog.editPost', 'metaWeblog.getCategories',
-    'metaWeblog.getPost', 'metaWeblog.getRecentPosts', 'metaWeblog.newMediaObject', 'metaWeblog.newPost',
-    'wp.newCategory'
+    'blogger.getUsersBlogs', 'blogger.deletePost', 'metaWeblog.editPost',
+    'metaWeblog.getCategories', 'metaWeblog.getPost',
+    'metaWeblog.getRecentPosts', 'metaWeblog.newMediaObject',
+    'metaWeblog.newPost', 'wp.newCategory'
 ]
 
 metaweblog = xmlrpc.client.ServerProxy('{}/xmlrpc/2/metaweblog'.format(url))
@@ -17,7 +18,7 @@ metaweblog = xmlrpc.client.ServerProxy('{}/xmlrpc/2/metaweblog'.format(url))
 print(metaweblog)
 
 for method in method_lists:
-    print('call method: %s'%method)
+    print('call method: %s' % method)
     fn = eval('%s.%s' % ('metaweblog', method))
 
     params = ['var1', 'admin', 'admin']

@@ -57,7 +57,9 @@ class MetaWeblog:
     def check_permission(self, username, password):
         res = security.login(self.db, username, password)
         msg = res and 'successful login' or 'bad login or password'
-        _logger.info("%s from '%s' using database '%s'", msg, username, self.db.lower())
+        _logger.info(
+            "%s from '%s' using database '%s'", msg, username, self.db.lower()
+        )
         if not res:
             return False
 
@@ -70,7 +72,9 @@ class MetaWeblog:
 
         return False
 
-    def exp_blogger_deletePost(self, appKey, postid, username, password, publish=True):
+    def exp_blogger_deletePost(
+        self, appKey, postid, username, password, publish=True
+    ):
         '''
 
         Return true, Always returns true.
@@ -99,19 +103,22 @@ class MetaWeblog:
 
         data = []
         for blog_id in blog_ids:
-            data.append(
-                {
-                    'blogid': str(blog_id['id']),
-                    'url': '%s/blog/%s' % (self.base_url.strip('/'), slug(blog_id)),
-                    'blogName': blog_id['name']
-                }
-            )
+            data.append({
+                'blogid':
+                    str(blog_id['id']),
+                'url':
+                    '%s/blog/%s' % (self.base_url.strip('/'), slug(blog_id)),
+                'blogName':
+                    blog_id['name']
+            })
 
         return data
 
     exp_metaWeblog_getUsersBlogs = exp_blogger_getUsersBlogs
 
-    def exp_metaWeblog_editPost(self, postid, username, password, post, publish=True):
+    def exp_metaWeblog_editPost(
+        self, postid, username, password, post, publish=True
+    ):
         '''
         Return  any
         '''
@@ -120,19 +127,25 @@ class MetaWeblog:
             return
 
         blog_post = self.env['blog.post'].search([('id', '=', postid)])
-        tag_ids = self.env['blog.tag'].search([('name', 'in', post['categories'])])
+        tag_ids = self.env['blog.tag'].search([
+            ('name', 'in', post['categories'])
+        ])
         vals = {
             'name':
                 post['title'],
             'content':
                 post['description'],
             'tag_ids':
-                tag_ids.ids and [(6, False, tag_ids.ids)] or [(5, False, False)],
+                tag_ids.ids and [(6, False, tag_ids.ids)] or
+                [(5, False, False)],
             'post_date':
                 'dateCreated' in post and datetime.datetime.strftime(
-                    datetime.datetime.strptime(post['dateCreated'].value, "%Y%m%dT%H:%M:%S"),
-                    DEFAULT_SERVER_DATETIME_FORMAT
-                ) or datetime.datetime.strftime(datetime.datetime.now(), DEFAULT_SERVER_DATETIME_FORMAT),
+                    datetime.datetime.strptime(
+                        post['dateCreated'].value, "%Y%m%dT%H:%M:%S"
+                    ), DEFAULT_SERVER_DATETIME_FORMAT
+                ) or datetime.datetime.strftime(
+                    datetime.datetime.now(), DEFAULT_SERVER_DATETIME_FORMAT
+                ),
             'is_published':
                 Boolean(publish)
         }
@@ -159,15 +172,19 @@ class MetaWeblog:
         blog_id = self.env['blog.blog'].search([('id', '=', int(blogid))])
 
         for tag in tag_ids:
-            data.append(
-                {
-                    'categoryid': str(tag['id']),
-                    'title': tag['name'],
-                    'description': tag['name'],
-                    'htmlUrl': '%s/blog/%s/tag/%s' % (self.base_url.strip('/'), slug(blog_id), slug(tag)),
-                    'rssUrl': ''
-                }
-            )
+            data.append({
+                'categoryid':
+                    str(tag['id']),
+                'title':
+                    tag['name'],
+                'description':
+                    tag['name'],
+                'htmlUrl':
+                    '%s/blog/%s/tag/%s' %
+                    (self.base_url.strip('/'), slug(blog_id), slug(tag)),
+                'rssUrl':
+                    ''
+            })
 
         return data
 
@@ -200,25 +217,35 @@ class MetaWeblog:
         blog_post = self.env['blog.post'].search([('id', '=', int(postid))])
 
         post = {
-            'dateCreated': blog_post.post_date and DateTime(blog_post.post_date),
-            'description': blog_post.content,
-            'title': blog_post.name,
+            'dateCreated':
+                blog_post.post_date and DateTime(blog_post.post_date),
+            'description':
+                blog_post.content,
+            'title':
+                blog_post.name,
             'enclosure': {
                 'length': 0,
             },
-            'link': '%s%s' % (self.base_url.strip('/'), blog_post.website_url),
-            'permalink': '%s%s' % (self.base_url.strip('/'), blog_post.website_url),
-            'postid': blog_post.id,
-            'userid': str(self.env.uid),
+            'link':
+                '%s%s' % (self.base_url.strip('/'), blog_post.website_url),
+            'permalink':
+                '%s%s' % (self.base_url.strip('/'), blog_post.website_url),
+            'postid':
+                blog_post.id,
+            'userid':
+                str(self.env.uid),
             'source': {},
-            'mt_keywords': ''
+            'mt_keywords':
+                ''
         }
         if blog_post.tag_ids:
             post.update({'categories': blog_post.tag_ids.mapped('name')})
 
         return post
 
-    def exp_metaWeblog_getRecentPosts(self, blogid, username, password, numberOfPosts=20):
+    def exp_metaWeblog_getRecentPosts(
+        self, blogid, username, password, numberOfPosts=20
+    ):
         '''
         Params 
             blogid, string
@@ -245,21 +272,31 @@ class MetaWeblog:
             return
 
         data = []
-        blog_post_ids = self.env['blog.post'].search([('blog_id', '=', int(blogid))], limit=numberOfPosts)
+        blog_post_ids = self.env['blog.post'].search([
+            ('blog_id', '=', int(blogid))
+        ],
+                                                     limit=numberOfPosts)
 
         for blog_post in blog_post_ids:
             post = {
-                'dateCreated': blog_post.post_date and DateTime(blog_post.post_date),
-                'description': blog_post.content,
-                'title': blog_post.name,
+                'dateCreated':
+                    blog_post.post_date and DateTime(blog_post.post_date),
+                'description':
+                    blog_post.content,
+                'title':
+                    blog_post.name,
                 'enclosure': {
                     'length': 0
                 },
-                'link': '%s%s' % (self.base_url.strip('/'), blog_post.website_url),
-                'permalink': '%s%s' % (self.base_url.strip('/'), blog_post.website_url),
-                'postid': str(blog_post['id']),
+                'link':
+                    '%s%s' % (self.base_url.strip('/'), blog_post.website_url),
+                'permalink':
+                    '%s%s' % (self.base_url.strip('/'), blog_post.website_url),
+                'postid':
+                    str(blog_post['id']),
                 'source': {},
-                'userid': str(self.env.uid)
+                'userid':
+                    str(self.env.uid)
             }
 
             if blog_post.tag_ids:
@@ -286,7 +323,10 @@ class MetaWeblog:
         if not self.check_permission(username, password):
             return
 
-        image_types = ['image/gif', 'image/jpe', 'image/jpeg', 'image/jpg', 'image/gif', 'image/png', 'image/svg+xml']
+        image_types = [
+            'image/gif', 'image/jpe', 'image/jpeg', 'image/jpg', 'image/gif',
+            'image/png', 'image/svg+xml'
+        ]
 
         bin_data = base64.standard_b64encode(file['bits'].data)
         name = file['name']
@@ -311,9 +351,13 @@ class MetaWeblog:
         attachment_id = self.env['ir.attachment'].create(attachment_data)
 
         media_info = attachment_id._get_media_info()
-        return {'url': media_info['image_src']}
+        return {
+            'url': media_info['image_src']
+        }
 
-    def exp_metaWeblog_newPost(self, blogid, username, password, post, publish=True):
+    def exp_metaWeblog_newPost(
+        self, blogid, username, password, post, publish=True
+    ):
         '''
         Params post
             dateCreated
@@ -338,17 +382,26 @@ class MetaWeblog:
         if not self.check_permission(username, password):
             return
 
-        tag_ids = self.env['blog.tag'].search([('name', 'in', post['categories'])])
-        postid = self.env['blog.post'].create(
-            {
-                'name': post['title'],
-                'content': post['description'],
-                'tag_ids': tag_ids.ids and [(6, False, tag_ids.ids)] or [(5, False, False)],
-                'post_date': datetime.datetime.strftime(datetime.datetime.now(), DEFAULT_SERVER_DATETIME_FORMAT),
-                'blog_id': int(blogid),
-                'is_published': Boolean(publish)
-            }
-        )
+        tag_ids = self.env['blog.tag'].search([
+            ('name', 'in', post['categories'])
+        ])
+        postid = self.env['blog.post'].create({
+            'name':
+                post['title'],
+            'content':
+                post['description'],
+            'tag_ids':
+                tag_ids.ids and [(6, False, tag_ids.ids)] or
+                [(5, False, False)],
+            'post_date':
+                datetime.datetime.strftime(
+                    datetime.datetime.now(), DEFAULT_SERVER_DATETIME_FORMAT
+                ),
+            'blog_id':
+                int(blogid),
+            'is_published':
+                Boolean(publish)
+        })
 
         return str(postid.id)
 
