@@ -328,7 +328,12 @@ class MetaWeblog:
             'image/png', 'image/svg+xml'
         ]
 
+        '''
+        file = {'bits': <xmlrpc.client.Binary object at 0x7f831131fac8>, 'name': '112922_0233_Testblog21.jpg', 'type': 'image/jpg'}
+        '''
+
         bin_data = base64.standard_b64encode(file['bits'].data)
+
         name = file['name']
         if name:
             media_name = name.split('/').pop()
@@ -350,9 +355,8 @@ class MetaWeblog:
 
         attachment_id = self.env['ir.attachment'].create(attachment_data)
 
-        media_info = attachment_id._get_media_info()
         return {
-            'url': media_info['image_src']
+            'url': attachment_id.local_url
         }
 
     def exp_metaWeblog_newPost(
